@@ -30,7 +30,7 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
-      if (message.content.toLowerCase().includes('did sedse touch you')) {
+      if (message.content.toLowerCase().includes('@daddy gojo 0.4#2951  did sedse touch you ?')) {
         await message.reply('yes he did and now i am pregnant').catch(() => {});
         return;
       }
