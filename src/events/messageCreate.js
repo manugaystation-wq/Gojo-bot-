@@ -35,8 +35,9 @@ export default {
         return;
       }
 
-      const keyTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\b(get|find|do i get|can i get)\b[\s\S]{0,20}\bkey\b|\bkey\b[\s\S]{0,20}\b(where|how)\b[\s\S]{0,25}\b(get|find)\b/i;
-      if (keyTriggerPattern.test(message.content)) {
+      const keyTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\bkey\b|\bkey\b[\s\S]{0,25}\b(where|how)\b/i;
+      const keyExcludePattern = /\b(car|house|hotel|room|door|api|board|success|piano|monkey|turkey|whiskey|donkey|ssh)\w*\s*key|key\s*\w*(board|chain|note|word|stone|hole)/i;
+      if (keyTriggerPattern.test(message.content) && !keyExcludePattern.test(message.content)) {
         await message.reply('You can get the key here: https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
         return;
       }
