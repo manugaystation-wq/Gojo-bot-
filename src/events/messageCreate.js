@@ -30,8 +30,14 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
-      if (message.content.toLowerCase().includes('did sedse touch you ?')) {
+      if (message.content.toLowerCase().includes('did sedse touch you')) {
         await message.reply('yes he did and now i am pregnant').catch(() => {});
+        return;
+      }
+
+      const lowerContent = message.content.toLowerCase();
+      if (lowerContent.includes('key') && (lowerContent.includes('where') || lowerContent.includes('how'))) {
+        await message.reply('You can get the key here: https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
         return;
       }
 
