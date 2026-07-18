@@ -1,9 +1,9 @@
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getGuildMusicData, clearUpdateInterval } from './playerStore.js';
-import { canControlMusic, requireVoiceChannel, VOICE_CHANNEL_DENIAL } from './permissions.js';
+import { canControlMusic, requireVoiceChannel, VOICE_CHANNEL_DENIAL, REQUESTER_ONLY_DENIAL } from './permissions.js';
 import {
     buildNowPlayingEmbed,
     buildQueueEmbed,
@@ -39,11 +39,22 @@ export function assertInVoice(member) {
 }
 
 export function assertCanControl(member, player) {
-    if (!canControlMusic(member, player)) {
+    const memberChannel = member?.voice?.channel;
+    if (!memberChannel || memberChannel.id !== player?.voiceChannel) {
         throw new TitanBotError(
             'Wrong voice channel',
             ErrorTypes.PERMISSION,
             VOICE_CHANNEL_DENIAL,
+        );
+    }
+
+    const requesterId = player.current?.info?.requester?.id;
+    const isMod = member.permissions?.has(PermissionFlagsBits.ModerateMembers);
+    if (requesterId && member.id !== requesterId && !isMod) {
+        throw new TitanBotError(
+            'Not requester',
+            ErrorTypes.PERMISSION,
+            REQUESTER_ONLY_DENIAL,
         );
     }
 }
