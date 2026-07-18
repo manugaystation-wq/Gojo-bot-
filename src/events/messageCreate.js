@@ -30,6 +30,11 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
+      if (message.content.toLowerCase().includes('did sedse touch you')) {
+        await message.reply('yes he did and now i am pregnant').catch(() => {});
+        return;
+      }
+
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
         return;
