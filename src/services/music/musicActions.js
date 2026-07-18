@@ -529,6 +529,6 @@ export async function replyMusicSuccess(interaction, embed) {
     if (interaction.deferred || interaction.replied) {
         await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     } else {
-        await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [embed] });
     }
 }
