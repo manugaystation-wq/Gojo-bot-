@@ -59,10 +59,16 @@ export default {
             const cases = await getModerationCases(interaction.guild.id, filters);
 
             if (cases.length === 0) {
-                throw new Error(targetUser 
-                    ? `No moderation cases found for ${targetUser.tag}`
-                    : `No ${filterType === 'all' ? '' : filterType} cases found in this server.`
-                );
+                const message = targetUser
+                    ? `No moderation cases found for **${targetUser.tag}**.`
+                    : `No ${filterType === 'all' ? '' : `${filterType} `}cases found in this server.`;
+
+                return await interaction.editReply({
+                    embeds: [createEmbed({
+                        title: 'No Cases Found',
+                        description: message,
+                    })],
+                });
             }
 
             const CASES_PER_PAGE = 5;
@@ -129,7 +135,7 @@ export default {
 
             const collector = message.createMessageComponentCollector({
                 componentType: ComponentType.Button,
-time: 120000
+                time: 120000
             });
 
             collector.on('collect', async (buttonInteraction) => {
