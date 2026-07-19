@@ -12,8 +12,86 @@ import {
     getQueuePageSize,
 } from './musicEmbeds.js';
 import { refreshPlayerMessage } from './playerHandler.js';
+import {
+    canPlaySedseWarning,
+    markSedseWarningPlayed,
+    setPendingResume,
+} from './sedseWarningStore.js';
 
 const YOUTUBE_URL_PATTERN = /(?:youtube\.com|youtu\.be)/i;
+
+const SEDSE_USER_ID = '1025636761533169674';
+const SEDSE_WARNING_AUDIO_URL = 'https://cdn.discordapp.com/attachments/1042518825855357001/1528426923359994048/ATOMIC-2026-07-19-17-41-dont-you-dare-skip-sedses-songs-if-you-do-it-ag.mp3?ex=6a5e41ff&is=6a5cf07f&hm=f5e3e0ec4b9a713af4bc775ddd0e8fe8c6a3a57e57a1d8b59ba0411643e31835';
+
+function getTrackIdentifier(track) {
+    return track?.info?.identifier || track?.info?.uri || track?.info?.title;
+}
+
+// Moves the most-recently-added queue item to the given index, using only
+// queue methods already proven to work elsewhere (add/remove/splice).
+function moveLastAddedTo(player, index) {
+    const lastIndex = player.queue.length - 1;
+    const item = player.queue[lastIndex];
+    player.queue.remove(lastIndex);
+    player.queue.splice(index, 0, item);
+    return item;
+}
+
+// If the currently playing track belongs to the protected user, this blocks
+// the skip: it interrupts playback with a warning clip (rate-limited to once
+// every 60s), then re-queues the SAME track immediately after so it resumes
+// from the exact position it was interrupted at. Returns true if it intercepted.
+async function maybePlaySedseWarning(client, player) {
+    const requesterId = player.current?.info?.requester?.id;
+    if (requesterId !== SEDSE_USER_ID || !player.current) {
+        return false;
+    }
+
+    const originalTrack = player.current;
+    const originalPosition = player.position || 0;
+    const guildData = getGuildMusicData(player.guildId);
+
+    let warningQueued = false;
+
+    if (canPlaySedseWarning(player.guildId)) {
+        try {
+            const result = await client.riffy.resolve({
+                query: SEDSE_WARNING_AUDIO_URL,
+                requester: { id: client.user.id, username: client.user.username },
+            });
+
+            const warningTrack = result?.tracks?.[0];
+            if (warningTrack) {
+                player.queue.add(warningTrack);
+                moveLastAddedTo(player, 0);
+                markSedseWarningPlayed(player.guildId);
+                warningQueued = true;
+            } else {
+                logger.warn('Sedse warning: no track resolved from audio URL', { loadType: result?.loadType });
+            }
+        } catch (error) {
+            logger.error('Sedse warning: failed to resolve/queue warning track:', error);
+        }
+    }
+
+    // Re-queue the same track so it plays right after the warning (or
+    // immediately, if the warning is on cooldown and was skipped this time).
+    player.queue.add(originalTrack);
+    const resumeTrack = moveLastAddedTo(player, warningQueued ? 1 : 0);
+
+    const resumeIdentifier = getTrackIdentifier(resumeTrack);
+    setPendingResume(player.guildId, resumeIdentifier, originalPosition);
+
+    // Clear the trackStart de-dupe guard so this legitimate re-start of the
+    // same track isn't mistaken for a duplicate event and ignored.
+    guildData.lastStartedTrack = null;
+
+    return true;
+}
+
+export async function playSedseWarningIfApplicable(client, player) {
+    return maybePlaySedseWarning(client, player);
+}
 
 export function getPlayer(client, guildId) {
     return client.riffy?.players?.get(guildId) || null;
@@ -215,53 +293,6 @@ export async function playQuery(client, interaction, query) {
     throw new TitanBotError('No results', ErrorTypes.USER_INPUT, `No results found. (loadType: ${loadType})`);
 }
 
-import { canPlaySedseWarning, markSedseWarningPlayed } from './sedseWarningStore.js';
-
-const SEDSE_USER_ID = '1244548819362906203';
-// Replace this with the real Discord CDN attachment URL for the warning clip.
-const SEDSE_WARNING_AUDIO_URL = 'https://cdn.discordapp.com/attachments/1042518825855357001/1528426923359994048/ATOMIC-2026-07-19-17-41-dont-you-dare-skip-sedses-songs-if-you-do-it-ag.mp3?ex=6a5e41ff&is=6a5cf07f&hm=f5e3e0ec4b9a713af4bc775ddd0e8fe8c6a3a57e57a1d8b59ba0411643e31835';
-
-async function maybePlaySedseWarning(client, player) {
-    const requesterId = player.current?.info?.requester?.id;
-    if (requesterId !== SEDSE_USER_ID) {
-        return;
-    }
-
-    if (!canPlaySedseWarning(player.guildId)) {
-        return;
-    }
-
-    try {
-        const result = await client.riffy.resolve({
-            query: SEDSE_WARNING_AUDIO_URL,
-            requester: { id: client.user.id, username: client.user.username },
-        });
-
-        const warningTrack = result?.tracks?.[0];
-        if (!warningTrack) {
-            logger.warn('Sedse warning: no track resolved from audio URL', { loadType: result?.loadType });
-            return;
-        }
-
-        // Insert at the very front of the queue so it plays immediately after
-        // the current (skipped) track stops, ahead of whatever was queued next.
-        // Uses add() + splice() rather than unshift(), since those are the queue
-        // operations already proven to work correctly elsewhere (see moveInQueue).
-        player.queue.add(warningTrack);
-        const insertedIndex = player.queue.length - 1;
-        const queuedWarningTrack = player.queue[insertedIndex];
-        player.queue.remove(insertedIndex);
-        player.queue.splice(0, 0, queuedWarningTrack);
-        markSedseWarningPlayed(player.guildId);
-    } catch (error) {
-        logger.error('Sedse warning: failed to resolve/queue warning track:', error);
-    }
-}
-
-export async function playSedseWarningIfApplicable(client, player) {
-    return maybePlaySedseWarning(client, player);
-}
-
 export async function skipTrack(client, interaction) {
     const player = getPlayer(client, interaction.guild.id);
     if (!player?.current) {
@@ -270,7 +301,7 @@ export async function skipTrack(client, interaction) {
     assertCanControl(interaction.member, player);
     const title = player.current.info?.title || 'Unknown';
 
-    await maybePlaySedseWarning(client, player);
+    const intercepted = await maybePlaySedseWarning(client, player);
 
     // Under track-loop, stop() would replay the same track. Clear it so the skip
     // advances; trackStart re-applies the stored loop mode to the next track.
@@ -278,6 +309,11 @@ export async function skipTrack(client, interaction) {
         player.setLoop('none');
     }
     player.stop();
+
+    if (intercepted) {
+        return successEmbed('Nice Try', `**${title}** can't be skipped. It'll resume right where it left off.`);
+    }
+
     return successEmbed('Skipped', `Skipped **${title}**.`);
 }
 
