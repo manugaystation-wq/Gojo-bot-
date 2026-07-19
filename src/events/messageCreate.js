@@ -30,8 +30,13 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
-      if (message.content.toLowerCase().includes('did sedse touch you')) {
+      if (message.content.toLowerCase().includes('did sedse touch you') && message.mentions.has('1525077558633435136')) {
         await message.reply('yes he did and now i am pregnant').catch(() => {});
+        return;
+      }
+
+      if (message.content.toLowerCase().includes('good boy') && message.mentions.has('1525077558633435136')) {
+        await message.reply('thank you daddy').catch(() => {});
         return;
       }
 
