@@ -12,6 +12,8 @@ import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, 
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { createEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
+import { isDumbModeEnabled } from '../services/fun/dumbModeStore.js';
+import { relayDumbModeMessage } from '../services/fun/dumbModeRelay.js';
 import {
   getCountingGameConfig,
   saveCountingGameConfig,
@@ -30,6 +32,13 @@ export default {
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
 
+      if (isDumbModeEnabled(message.guild.id, message.author.id) && message.content?.trim()) {
+        const relayed = await relayDumbModeMessage(message);
+        if (relayed) {
+          return;
+        }
+      }
+
       if (message.content.toLowerCase().includes('did sedse touch you') && message.mentions.has('1525077558633435136')) {
         await message.reply('yes he did and now i am pregnant').catch(() => {});
         return;
@@ -37,6 +46,12 @@ export default {
 
       if (message.content.toLowerCase().includes('good boy') && message.mentions.has('1525077558633435136')) {
         await message.reply('thank you daddy').catch(() => {});
+        return;
+      }
+
+      const scriptTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(where|how)\b|\b(want|need|give)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(want|need|give)\b/i;
+      if (scriptTriggerPattern.test(message.content)) {
+        await message.reply('You can get the script here: https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
         return;
       }
 
