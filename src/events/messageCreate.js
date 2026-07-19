@@ -51,7 +51,7 @@ export default {
 
       const scriptTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(where|how)\b|\b(want|need|give)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(want|need|give)\b/i;
       if (scriptTriggerPattern.test(message.content)) {
-        await message.reply('You can get the script here: https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
+        await message.reply('here is the script https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
         return;
       }
 
