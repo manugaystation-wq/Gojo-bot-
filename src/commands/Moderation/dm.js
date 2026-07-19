@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -6,6 +6,9 @@ import { sanitizeMarkdown } from '../../utils/validation.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+
+const ALLOWED_USER_ID = '1042151837341601882';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
@@ -28,7 +31,6 @@ export default {
                 .setDescription("Send the message anonymously (default: false)")
                 .setRequired(false)
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
         .setDMPermission(false),
     category: "moderation",
 
@@ -43,7 +45,11 @@ export default {
             return;
         }
 
-    const targetUser = interaction.options.getUser("user");
+        if (interaction.user.id !== ALLOWED_USER_ID) {
+            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'This command is not available to you.' });
+        }
+
+        const targetUser = interaction.options.getUser("user");
         const message = interaction.options.getString("message");
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
