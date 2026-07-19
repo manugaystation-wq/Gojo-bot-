@@ -1,4 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { logger } from '../../utils/logger.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -238,15 +239,22 @@ async function maybePlaySedseWarning(client, player) {
 
         const warningTrack = result?.tracks?.[0];
         if (!warningTrack) {
+            logger.warn('Sedse warning: no track resolved from audio URL', { loadType: result?.loadType });
             return;
         }
 
         // Insert at the very front of the queue so it plays immediately after
         // the current (skipped) track stops, ahead of whatever was queued next.
-        player.queue.unshift(warningTrack);
+        // Uses add() + splice() rather than unshift(), since those are the queue
+        // operations already proven to work correctly elsewhere (see moveInQueue).
+        player.queue.add(warningTrack);
+        const insertedIndex = player.queue.length - 1;
+        const queuedWarningTrack = player.queue[insertedIndex];
+        player.queue.remove(insertedIndex);
+        player.queue.splice(0, 0, queuedWarningTrack);
         markSedseWarningPlayed(player.guildId);
-    } catch {
-        // If resolving/queueing the warning fails, just let the skip proceed normally.
+    } catch (error) {
+        logger.error('Sedse warning: failed to resolve/queue warning track:', error);
     }
 }
 
