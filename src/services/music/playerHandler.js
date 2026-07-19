@@ -158,6 +158,15 @@ export function setupPlayerHandler(client) {
         try {
             const guildData = getGuildMusicData(player.guildId);
 
+            // Lavalink/Riffy can re-emit trackStart for the same track (e.g. during a
+            // brief node reconnect). Ignore a duplicate firing for the same track.
+            const trackIdentifier = track?.info?.identifier || track?.info?.uri || track?.info?.title;
+            if (trackIdentifier && guildData.lastStartedTrack === trackIdentifier) {
+                logger.debug(`trackStart: ignoring duplicate event for "${track?.info?.title}"`);
+                return;
+            }
+            guildData.lastStartedTrack = trackIdentifier;
+
             // Keep the Lavalink player's loop mode aligned with the stored preference.
             // Skip temporarily clears track-loop so it can advance; restore it here.
             if (guildData.loop && player.loop !== guildData.loop) {
