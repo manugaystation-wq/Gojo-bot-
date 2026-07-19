@@ -13,6 +13,7 @@ const IDLE_DISCONNECT_MS = 30 * 1000;
 async function editOrSendPlayerMessage(client, guildData, channelId, embed, components) {
     const channel = client.channels.cache.get(channelId);
     if (!channel) {
+        logger.warn(`Music panel channel not found: channelId=${channelId}`);
         guildData.playerMessageId = null;
         guildData.playerChannelId = null;
         return;
@@ -38,6 +39,39 @@ async function editOrSendPlayerMessage(client, guildData, channelId, embed, comp
         guildData.playerChannelId = channel.id;
     } catch (error) {
         logger.error('Failed to send music player message:', error);
+    }
+}
+
+// Used specifically on trackStart so each new song gets its own fresh panel,
+// instead of editing the previous track's message in place.
+async function sendFreshPlayerMessage(client, guildData, channelId, embed, components) {
+    // Delete the old panel if it exists, so we always post a brand new one per track.
+    if (guildData.playerMessageId && guildData.playerChannelId) {
+        try {
+            const oldChannel = client.channels.cache.get(guildData.playerChannelId);
+            if (oldChannel) {
+                const oldMsg = await oldChannel.messages.fetch(guildData.playerMessageId);
+                await oldMsg.delete();
+            }
+        } catch {
+            // already deleted, ignore
+        }
+        guildData.playerMessageId = null;
+        guildData.playerChannelId = null;
+    }
+
+    const channel = client.channels.cache.get(channelId);
+    if (!channel) {
+        logger.warn(`Music panel channel not found: channelId=${channelId}`);
+        return;
+    }
+
+    try {
+        const newMsg = await channel.send({ embeds: [embed], components });
+        guildData.playerMessageId = newMsg.id;
+        guildData.playerChannelId = channel.id;
+    } catch (error) {
+        logger.error('Failed to send fresh music player message:', error);
     }
 }
 
@@ -145,7 +179,8 @@ export function setupPlayerHandler(client) {
             const embed = buildNowPlayingEmbed(track, player, guildData);
             const components = buildPlayerButtonRows(player, guildData);
             const channelId = guildData.playerChannelId || player.textChannel;
-            await editOrSendPlayerMessage(client, guildData, channelId, embed, components);
+            logger.debug(`trackStart: posting player panel to channelId=${channelId}`);
+            await sendFreshPlayerMessage(client, guildData, channelId, embed, components);
             startUpdateInterval(client, player.guildId);
         } catch (error) {
             logger.error('Music trackStart error:', error);
