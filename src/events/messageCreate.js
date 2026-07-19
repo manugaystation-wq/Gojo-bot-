@@ -12,8 +12,6 @@ import { getCommandPrefix, getBotMessage, isBotOwner, isCommandCategoryEnabled, 
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { createEmbed } from '../utils/embeds.js';
 import { isCommandEnabled } from '../services/commandAccessService.js';
-import { isDumbModeEnabled } from '../services/fun/dumbModeStore.js';
-import { relayDumbModeMessage } from '../services/fun/dumbModeRelay.js';
 import {
   getCountingGameConfig,
   saveCountingGameConfig,
@@ -31,13 +29,6 @@ export default {
       if (message.author.bot || !message.guild) return;
 
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
-
-      if (isDumbModeEnabled(message.guild.id, message.author.id) && message.content?.trim()) {
-        const relayed = await relayDumbModeMessage(message);
-        if (relayed) {
-          return;
-        }
-      }
 
       if (message.content.toLowerCase().includes('did sedse touch you') && message.mentions.has('1525077558633435136')) {
         await message.reply('yes he did and now i am pregnant').catch(() => {});
