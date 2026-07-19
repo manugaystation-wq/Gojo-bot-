@@ -214,6 +214,46 @@ export async function playQuery(client, interaction, query) {
     throw new TitanBotError('No results', ErrorTypes.USER_INPUT, `No results found. (loadType: ${loadType})`);
 }
 
+import { canPlaySedseWarning, markSedseWarningPlayed } from './sedseWarningStore.js';
+
+const SEDSE_USER_ID = '1025636761533169674';
+// Replace this with the real Discord CDN attachment URL for the warning clip.
+const SEDSE_WARNING_AUDIO_URL = 'https://cdn.discordapp.com/attachments/1042518825855357001/1528426923359994048/ATOMIC-2026-07-19-17-41-dont-you-dare-skip-sedses-songs-if-you-do-it-ag.mp3?ex=6a5e41ff&is=6a5cf07f&hm=f5e3e0ec4b9a713af4bc775ddd0e8fe8c6a3a57e57a1d8b59ba0411643e31835&';
+
+async function maybePlaySedseWarning(client, player) {
+    const requesterId = player.current?.info?.requester?.id;
+    if (requesterId !== SEDSE_USER_ID) {
+        return;
+    }
+
+    if (!canPlaySedseWarning(player.guildId)) {
+        return;
+    }
+
+    try {
+        const result = await client.riffy.resolve({
+            query: SEDSE_WARNING_AUDIO_URL,
+            requester: { id: client.user.id, username: client.user.username },
+        });
+
+        const warningTrack = result?.tracks?.[0];
+        if (!warningTrack) {
+            return;
+        }
+
+        // Insert at the very front of the queue so it plays immediately after
+        // the current (skipped) track stops, ahead of whatever was queued next.
+        player.queue.unshift(warningTrack);
+        markSedseWarningPlayed(player.guildId);
+    } catch {
+        // If resolving/queueing the warning fails, just let the skip proceed normally.
+    }
+}
+
+export async function playSedseWarningIfApplicable(client, player) {
+    return maybePlaySedseWarning(client, player);
+}
+
 export async function skipTrack(client, interaction) {
     const player = getPlayer(client, interaction.guild.id);
     if (!player?.current) {
@@ -221,6 +261,9 @@ export async function skipTrack(client, interaction) {
     }
     assertCanControl(interaction.member, player);
     const title = player.current.info?.title || 'Unknown';
+
+    await maybePlaySedseWarning(client, player);
+
     // Under track-loop, stop() would replay the same track. Clear it so the skip
     // advances; trackStart re-applies the stored loop mode to the next track.
     if (player.loop === 'track') {
