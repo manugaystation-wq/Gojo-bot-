@@ -218,7 +218,7 @@ import { canPlaySedseWarning, markSedseWarningPlayed } from './sedseWarningStore
 
 const SEDSE_USER_ID = '1025636761533169674';
 // Replace this with the real Discord CDN attachment URL for the warning clip.
-const SEDSE_WARNING_AUDIO_URL = 'https://cdn.discordapp.com/attachments/1042518825855357001/1528426923359994048/ATOMIC-2026-07-19-17-41-dont-you-dare-skip-sedses-songs-if-you-do-it-ag.mp3?ex=6a5e41ff&is=6a5cf07f&hm=f5e3e0ec4b9a713af4bc775ddd0e8fe8c6a3a57e57a1d8b59ba0411643e31835&';
+const SEDSE_WARNING_AUDIO_URL = 'https://cdn.discordapp.com/attachments/1042518825855357001/1528426923359994048/ATOMIC-2026-07-19-17-41-dont-you-dare-skip-sedses-songs-if-you-do-it-ag.mp3?ex=6a5e41ff&is=6a5cf07f&hm=f5e3e0ec4b9a713af4bc775ddd0e8fe8c6a3a57e57a1d8b59ba0411643e31835';
 
 async function maybePlaySedseWarning(client, player) {
     const requesterId = player.current?.info?.requester?.id;
