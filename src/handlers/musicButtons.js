@@ -9,6 +9,7 @@ import {
     setLoopMode,
     applyPause,
     applyResume,
+    playSedseWarningIfApplicable,
 } from '../services/music/musicActions.js';
 import { canControlMusic, VOICE_CHANNEL_DENIAL, REQUESTER_ONLY_DENIAL } from '../services/music/permissions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
@@ -120,6 +121,7 @@ async function handleMusicButton(interaction, client) {
                 await applyResume(client, interaction.guild.id);
                 break;
             case MUSIC_BUTTON_IDS.SKIP:
+                await playSedseWarningIfApplicable(client, player);
                 // Under track-loop, stop() would replay the same track. Clear it so the
                 // skip advances; trackStart re-applies the stored loop to the next track.
                 if (player.loop === 'track') {
