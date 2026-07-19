@@ -1,4 +1,4 @@
-import { MessageFlags } from 'discord.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { getGuildMusicData } from '../services/music/playerStore.js';
@@ -10,10 +10,27 @@ import {
     applyPause,
     applyResume,
 } from '../services/music/musicActions.js';
-import { canControlMusic, VOICE_CHANNEL_DENIAL } from '../services/music/permissions.js';
+import { canControlMusic, VOICE_CHANNEL_DENIAL, REQUESTER_ONLY_DENIAL } from '../services/music/permissions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
 import { MUSIC_BUTTON_IDS } from '../services/music/musicEmbeds.js';
 import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
+
+// Same-voice-channel check plus mod bypass, mirroring assertCanControl in musicActions.js.
+// Returns { allowed, reason } so callers can show the right denial message.
+function checkButtonControl(member, player) {
+    const memberChannel = member?.voice?.channel;
+    if (!memberChannel || memberChannel.id !== player?.voiceChannel) {
+        return { allowed: false, reason: VOICE_CHANNEL_DENIAL };
+    }
+
+    const requesterId = player.current?.info?.requester?.id;
+    const isMod = member.permissions?.has(PermissionFlagsBits.ModerateMembers);
+    if (requesterId && member.id !== requesterId && !isMod) {
+        return { allowed: false, reason: REQUESTER_ONLY_DENIAL };
+    }
+
+    return { allowed: true };
+}
 
 async function handleMusicButton(interaction, client) {
     const player = getPlayer(client, interaction.guild.id);
@@ -24,8 +41,9 @@ async function handleMusicButton(interaction, client) {
         if (!player?.current) {
             return replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Nothing is playing right now.' });
         }
-        if (!canControlMusic(interaction.member, player)) {
-            return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: VOICE_CHANNEL_DENIAL });
+        const control = checkButtonControl(interaction.member, player);
+        if (!control.allowed) {
+            return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: control.reason });
         }
         guildData.queuePages.set(interaction.user.id, 0);
         const payload = buildQueueReply(client, interaction.guild.id, 0);
@@ -47,8 +65,9 @@ async function handleMusicButton(interaction, client) {
         if (!player?.current) {
             return replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'Nothing is playing right now.' });
         }
-        if (!canControlMusic(interaction.member, player)) {
-            return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: VOICE_CHANNEL_DENIAL });
+        const control = checkButtonControl(interaction.member, player);
+        if (!control.allowed) {
+            return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: control.reason });
         }
 
         await interaction.deferUpdate();
@@ -85,8 +104,9 @@ async function handleMusicButton(interaction, client) {
         return replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: 'No music is playing. Use `/play` first.' });
     }
 
-    if (!canControlMusic(interaction.member, player)) {
-        return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: VOICE_CHANNEL_DENIAL });
+    const control = checkButtonControl(interaction.member, player);
+    if (!control.allowed) {
+        return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: control.reason });
     }
 
     await interaction.deferUpdate();
