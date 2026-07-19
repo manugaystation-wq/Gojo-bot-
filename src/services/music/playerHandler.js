@@ -2,6 +2,7 @@
 
 import { logger } from '../../utils/logger.js';
 import { getGuildMusicData, clearUpdateInterval } from './playerStore.js';
+import { consumePendingResume } from './sedseWarningStore.js';
 import {
     buildNowPlayingEmbed,
     buildPlayerButtonRows,
@@ -158,9 +159,17 @@ export function setupPlayerHandler(client) {
         try {
             const guildData = getGuildMusicData(player.guildId);
 
+            // If this track was re-queued specifically to resume after a blocked
+            // skip, seek it back to where it was interrupted, and don't let the
+            // duplicate-track guard below block this legitimate re-start.
+            const trackIdentifier = track?.info?.identifier || track?.info?.uri || track?.info?.title;
+            const resumePosition = consumePendingResume(player.guildId, trackIdentifier);
+            if (resumePosition != null) {
+                guildData.lastStartedTrack = null;
+            }
+
             // Lavalink/Riffy can re-emit trackStart for the same track (e.g. during a
             // brief node reconnect). Ignore a duplicate firing for the same track.
-            const trackIdentifier = track?.info?.identifier || track?.info?.uri || track?.info?.title;
             if (trackIdentifier && guildData.lastStartedTrack === trackIdentifier) {
                 logger.debug(`trackStart: ignoring duplicate event for "${track?.info?.title}"`);
                 return;
@@ -191,6 +200,10 @@ export function setupPlayerHandler(client) {
             logger.debug(`trackStart: posting player panel to channelId=${channelId}`);
             await sendFreshPlayerMessage(client, guildData, channelId, embed, components);
             startUpdateInterval(client, player.guildId);
+
+            if (resumePosition != null) {
+                player.seek(resumePosition);
+            }
         } catch (error) {
             logger.error('Music trackStart error:', error);
         }
