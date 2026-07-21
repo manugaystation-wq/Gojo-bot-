@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
@@ -278,8 +278,6 @@ class TitanBot extends Client {
           }
         }
         
-        // Save cleaned counters if any were orphaned
-        // Save cleaned counters if any were orphaned
         if (orphanedCounters.length > 0) {
           await saveServerCounters(this, guildId, validCounters);
           logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
@@ -352,8 +350,6 @@ class TitanBot extends Client {
         logger.info('✅ Web server closed');
       }
 
-      // Close database connection
-      // Close database connection
       if (this.db && this.db.db) {
         logger.info('Closing database connection...');
         try {
@@ -395,6 +391,13 @@ try {
     process.on('SIGINT', () => bot.shutdown('SIGINT'));
     
     process.on('uncaughtException', (error) => {
+      // Riffy can throw this synchronously when a track errors out with an
+      // already-empty queue; it's a harmless internal race, not a bot bug.
+      if (error?.message?.includes('Queue is empty')) {
+        logger.warn('Ignored harmless Riffy "Queue is empty" exception:', error.message);
+        return;
+      }
+
       // Process state may be corrupt after an uncaught throw; log and shut down cleanly.
       handleTaskError('uncaught_exception', error, { fatal: true });
       bot.shutdown('UNCAUGHT_EXCEPTION');
