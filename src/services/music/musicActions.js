@@ -126,16 +126,6 @@ export function assertCanControl(member, player) {
             VOICE_CHANNEL_DENIAL,
         );
     }
-
-    const requesterId = player.current?.info?.requester?.id;
-    const isMod = member.permissions?.has(PermissionFlagsBits.ModerateMembers);
-    if (requesterId && member.id !== requesterId && !isMod) {
-        throw new TitanBotError(
-            'Not requester',
-            ErrorTypes.PERMISSION,
-            REQUESTER_ONLY_DENIAL,
-        );
-    }
 }
 
 export async function ensurePlayer(client, interaction) {
@@ -587,8 +577,8 @@ export async function destroyPlayerSession(client, guildId, player, guildData, {
                 const msg = await channel.messages.fetch(guildData.playerMessageId);
                 await msg.delete();
             }
-        } catch {
-            // message already deleted
+        } catch (error) {
+            logger.warn(`Failed to delete music panel on session destroy: ${error.message}`);
         }
     }
 
