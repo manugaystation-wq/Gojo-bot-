@@ -265,8 +265,8 @@ export function setupPlayerHandler(client) {
                     const msg = await channel.messages.fetch(guildData.playerMessageId);
                     await msg.delete();
                 }
-            } catch {
-                // already deleted
+            } catch (error) {
+                logger.warn(`Failed to delete music panel on player disconnect: ${error.message}`);
             }
         }
 
