@@ -1,5 +1,12 @@
 [
   {
+    "host": "lavalink-2026-production-4aa8.up.railway.app",
+    "port": 443,
+    "password": "Alibaba69",
+    "secure": true,
+    "name": "SelfHosted"
+  },
+  {
     "host": "lavalinkv4.serenetia.com",
     "port": 443,
     "password": "https://seretia.link/discord",
@@ -26,12 +33,5 @@
     "password": "free",
     "secure": true,
     "name": "TriniumHost"
-  },
-  {
-    "host": "lavalink-2026-production-4aa8.up.railway.app",
-    "port": 443,
-    "password": "Alibaba69",
-    "secure": true,
-    "name": "SelfHosted"
   }
 ]
