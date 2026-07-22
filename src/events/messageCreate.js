@@ -35,7 +35,7 @@ export default {
         return;
       }
 
-      if (message.content.toLowerCase().includes('good boy') && message.mentions.has('1525077558633435136')) {
+      if (message.author.id === '1042151837341601882' && message.content.toLowerCase().includes('good boy') && message.mentions.has('1525077558633435136')) {
         await message.reply('thank you daddy').catch(() => {});
         return;
       }
