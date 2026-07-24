@@ -155,7 +155,11 @@ function isDuplicateTrack(player, track) {
     if (!uri) {
         return false;
     }
-    if (player.current?.info?.uri === uri) {
+    // Only treat the current track as a genuine duplicate if something is actually
+    // playing/paused. After a skip with an empty queue, Riffy can leave player.current
+    // pointing at the old track even though nothing is really active anymore.
+    const somethingActive = player.playing || player.paused;
+    if (somethingActive && player.current?.info?.uri === uri) {
         return true;
     }
     return player.queue.some((existing) => existing.info?.uri === uri);
