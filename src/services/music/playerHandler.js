@@ -156,6 +156,7 @@ export function setupPlayerHandler(client) {
     });
 
     client.riffy.on('trackStart', async (player, track) => {
+        logger.info(`trackStart fired for guild ${player.guildId}, track: "${track?.info?.title}"`);
         try {
             const guildData = getGuildMusicData(player.guildId);
 
@@ -171,7 +172,7 @@ export function setupPlayerHandler(client) {
             // Lavalink/Riffy can re-emit trackStart for the same track (e.g. during a
             // brief node reconnect). Ignore a duplicate firing for the same track.
             if (trackIdentifier && guildData.lastStartedTrack === trackIdentifier) {
-                logger.debug(`trackStart: ignoring duplicate event for "${track?.info?.title}"`);
+                logger.info(`trackStart: ignoring duplicate event for "${track?.info?.title}"`);
                 return;
             }
             guildData.lastStartedTrack = trackIdentifier;
@@ -197,7 +198,7 @@ export function setupPlayerHandler(client) {
             const embed = buildNowPlayingEmbed(track, player, guildData);
             const components = buildPlayerButtonRows(player, guildData);
             const channelId = guildData.playerChannelId || player.textChannel;
-            logger.debug(`trackStart: posting player panel to channelId=${channelId}`);
+            logger.info(`trackStart: posting player panel to channelId=${channelId}`);
             await sendFreshPlayerMessage(client, guildData, channelId, embed, components);
             startUpdateInterval(client, player.guildId);
 
