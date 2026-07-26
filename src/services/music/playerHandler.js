@@ -197,6 +197,33 @@ export function setupPlayerHandler(client) {
         }
     });
 
+    // Delete the panel the moment a track finishes, so it visibly disappears
+    // before the next one's trackStart posts a fresh one. queueEnd (below)
+    // still handles the "nothing left to play" case separately.
+    client.riffy.on('trackEnd', async (player) => {
+        try {
+            const guildData = getGuildMusicData(player.guildId);
+            if (!guildData.playerMessageId || !guildData.playerChannelId) {
+                return;
+            }
+
+            const channel = client.channels.cache.get(guildData.playerChannelId);
+            if (channel) {
+                try {
+                    const msg = await channel.messages.fetch(guildData.playerMessageId);
+                    await msg.delete();
+                } catch {
+                    // already deleted
+                }
+            }
+
+            guildData.playerMessageId = null;
+            guildData.playerChannelId = null;
+        } catch (error) {
+            logger.error('Music trackEnd panel cleanup error:', error);
+        }
+    });
+
     client.riffy.on('queueEnd', async (player) => {
         try {
             const guildData = getGuildMusicData(player.guildId);
