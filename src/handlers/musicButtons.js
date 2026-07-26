@@ -9,7 +9,6 @@ import {
     setLoopMode,
     applyPause,
     applyResume,
-    playSedseWarningIfApplicable,
 } from '../services/music/musicActions.js';
 import { canControlMusic, VOICE_CHANNEL_DENIAL, REQUESTER_ONLY_DENIAL } from '../services/music/permissions.js';
 import { refreshPlayerMessage } from '../services/music/playerHandler.js';
@@ -23,13 +22,6 @@ function checkButtonControl(member, player) {
     if (!memberChannel || memberChannel.id !== player?.voiceChannel) {
         return { allowed: false, reason: VOICE_CHANNEL_DENIAL };
     }
-
-    const requesterId = player.current?.info?.requester?.id;
-    const isMod = member.permissions?.has(PermissionFlagsBits.ModerateMembers);
-    if (requesterId && member.id !== requesterId && !isMod) {
-        return { allowed: false, reason: REQUESTER_ONLY_DENIAL };
-    }
-
     return { allowed: true };
 }
 
@@ -120,8 +112,13 @@ async function handleMusicButton(interaction, client) {
             case MUSIC_BUTTON_IDS.RESUME:
                 await applyResume(client, interaction.guild.id);
                 break;
-            case MUSIC_BUTTON_IDS.SKIP:
-                await playSedseWarningIfApplicable(client, player);
+            case MUSIC_BUTTON_IDS.SKIP: {
+                const isMod = interaction.member.permissions?.has(PermissionFlagsBits.ModerateMembers);
+                const requesterId = player.current?.info?.requester?.id;
+                const isRequester = requesterId && interaction.member.id === requesterId;
+                if (!isMod && !isRequester) {
+                    return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only the person who requested this song (or a moderator) can skip it.' });
+                }
                 // Under track-loop, stop() would replay the same track. Clear it so the
                 // skip advances; trackStart re-applies the stored loop to the next track.
                 if (player.loop === 'track') {
@@ -129,9 +126,15 @@ async function handleMusicButton(interaction, client) {
                 }
                 player.stop();
                 break;
-            case MUSIC_BUTTON_IDS.STOP:
+            }
+            case MUSIC_BUTTON_IDS.STOP: {
+                const isMod = interaction.member.permissions?.has(PermissionFlagsBits.ModerateMembers);
+                if (!isMod) {
+                    return replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only moderators can stop playback.' });
+                }
                 await destroyPlayerSession(client, interaction.guild.id, player, guildData);
                 break;
+            }
             case MUSIC_BUTTON_IDS.SHUFFLE:
                 if (player.queue.length > 0) {
                     player.queue.shuffle();
