@@ -214,6 +214,18 @@ export async function skipTrack(client, interaction) {
         throw new TitanBotError('No player', ErrorTypes.USER_INPUT, 'Nothing is playing right now.');
     }
     assertCanControl(interaction.member, player);
+
+    const isMod = interaction.member.permissions?.has(PermissionFlagsBits.ModerateMembers);
+    const requesterId = player.current?.info?.requester?.id;
+    const isRequester = requesterId && interaction.member.id === requesterId;
+    if (!isMod && !isRequester) {
+        throw new TitanBotError(
+            'Not requester',
+            ErrorTypes.PERMISSION,
+            'Only the person who requested this song (or a moderator) can skip it.',
+        );
+    }
+
     const title = player.current.info?.title || 'Unknown';
 
     // Under track-loop, stop() would replay the same track. Clear it so the skip
