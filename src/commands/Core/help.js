@@ -20,6 +20,10 @@ const CATEGORY_SELECT_ID = "help-category-select";
 const ALL_COMMANDS_ID = "help-all-commands";
 const BUG_REPORT_BUTTON_ID = "help-bug-report";
 const HELP_MENU_TIMEOUT_MS = 5 * 60 * 1000;
+const HELP_COOLDOWN_MS = 60 * 1000;
+
+// In-memory cooldown tracker: userId -> timestamp of last use.
+const lastHelpUsed = new Map();
 
 const CATEGORY_ICONS = {
     Core: "ℹ️",
@@ -143,6 +147,22 @@ export default {
     async execute(interaction, guildConfig, client) {
         
         const { MessageFlags } = await import('discord.js');
+
+        const now = Date.now();
+        const last = lastHelpUsed.get(interaction.user.id);
+        if (last && now - last < HELP_COOLDOWN_MS) {
+            const remainingSec = Math.ceil((HELP_COOLDOWN_MS - (now - last)) / 1000);
+            await InteractionHelper.safeDefer(interaction);
+            const cooldownEmbed = createEmbed({
+                title: "Command Cooldown",
+                description: `Please wait ${remainingSec}s before using /help again.`,
+                color: "warning",
+            });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [cooldownEmbed] });
+            return;
+        }
+        lastHelpUsed.set(interaction.user.id, now);
+
         await InteractionHelper.safeDefer(interaction);
         
         const { embeds, components } = await createInitialHelpMenu(client);
