@@ -40,19 +40,6 @@ export default {
         return;
       }
 
-      const scriptTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(where|how)\b|\b(want|need|give)\b[\s\S]{0,25}\bscript\b|\bscript\b[\s\S]{0,25}\b(want|need|give)\b/i;
-      if (scriptTriggerPattern.test(message.content)) {
-        await message.reply('here is the script https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
-        return;
-      }
-
-      const keyTriggerPattern = /\b(where|how)\b[\s\S]{0,25}\bkey\b|\bkey\b[\s\S]{0,25}\b(where|how)\b|\b(want|need|give)\b[\s\S]{0,25}\bkey\b|\bkey\b[\s\S]{0,25}\b(want|need|give)\b/i;
-      const keyExcludePattern = /\b(car|house|hotel|room|door|api|board|success|piano|monkey|turkey|whiskey|donkey|ssh)\w*\s*key|key\s*\w*(board|chain|note|word|stone|hole)/i;
-      if (keyTriggerPattern.test(message.content) && !keyExcludePattern.test(message.content)) {
-        await message.reply('You can get the key here: https://discord.com/channels/1500425376982372543/1525802750951293000').catch(() => {});
-        return;
-      }
-
       const countingProcessed = await handleCountingGame(message, client);
       if (countingProcessed) {
         return;
@@ -206,6 +193,9 @@ async function handleCountingGame(message, client) {
 }
 
 async function handleLeveling(message, client) {
+  // Leveling system disabled — hardcoded off since the per-guild config
+  // toggle wasn't taking effect. Remove this early return to re-enable.
+  return;
   try {
     const rateLimitKey = `xp-event:${message.guild.id}:${message.author.id}`;
     const canProcess = await checkRateLimit(rateLimitKey, MESSAGE_XP_RATE_LIMIT_ATTEMPTS, MESSAGE_XP_RATE_LIMIT_WINDOW_MS);
