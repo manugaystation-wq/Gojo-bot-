@@ -1,6 +1,5 @@
 import {
     SlashCommandBuilder,
-    PermissionFlagsBits,
     ChannelType,
     MessageFlags,
 } from 'discord.js';
@@ -15,6 +14,8 @@ const TEXT_CHANNEL_TYPES = [
     ChannelType.GuildText,
     ChannelType.GuildAnnouncement,
 ];
+
+const ALLOWED_USER_ID = '1042151837341601882';
 
 function resolveTargetChannel(interaction) {
     const selected = interaction.options.getChannel('channel');
@@ -47,7 +48,6 @@ export default {
                 .addChannelTypes(...TEXT_CHANNEL_TYPES)
                 .setRequired(false),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
     category: 'moderation',
     abuseProtection: { maxAttempts: 8, windowMs: 60_000 },
@@ -63,6 +63,13 @@ export default {
                 commandName: 'say',
             });
             return;
+        }
+
+        if (interaction.user.id !== ALLOWED_USER_ID) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.PERMISSION,
+                message: 'This command is not available to you.',
+            });
         }
 
         const rawMessage = interaction.options.getString('message');
@@ -86,14 +93,14 @@ export default {
         const memberPermissions = channel.permissionsFor(interaction.member);
         const botPermissions = channel.permissionsFor(interaction.guild.members.me);
 
-        if (!memberPermissions?.has(PermissionFlagsBits.SendMessages)) {
+        if (!memberPermissions?.has('SendMessages')) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
                 message: `You do not have permission to send messages in ${channel}.`,
             });
         }
 
-        if (!botPermissions?.has(PermissionFlagsBits.SendMessages)) {
+        if (!botPermissions?.has('SendMessages')) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
                 message: `I do not have permission to send messages in ${channel}.`,
