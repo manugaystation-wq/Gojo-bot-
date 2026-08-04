@@ -3,7 +3,6 @@ import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
@@ -19,7 +18,6 @@ export default {
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
   category: "moderation",
   abuseProtection: { maxAttempts: 5, windowMs: 60_000 },
-
   async execute(interaction, config, client) {
     const deferSuccess = await InteractionHelper.safeDefer(interaction, {
       flags: MessageFlags.Ephemeral,
@@ -32,18 +30,14 @@ export default {
       });
       return;
     }
-
     const amount = interaction.options.getInteger("amount");
     const channel = interaction.channel;
-
     if (amount < 1 || amount > 100)
       return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please specify a number between 1 and 100.' });
-
     try {
       const fetched = await channel.messages.fetch({ limit: amount });
       const deleted = await channel.bulkDelete(fetched, true);
       const deletedCount = deleted.size;
-
       await logEvent({
         client,
         guild: interaction.guild,
@@ -61,6 +55,21 @@ export default {
         }
       });
 
+      // Public, visible note in the channel itself showing who ran the purge —
+      // the ephemeral reply below only the moderator sees, and it auto-deletes.
+      const publicNotice = await channel.send({
+        content: `🧹 **${deletedCount}** message(s) purged by ${interaction.user}.`,
+      }).catch((error) => {
+        logger.debug('Failed to send public purge notice:', error.message);
+        return null;
+      });
+
+      if (publicNotice) {
+        setTimeout(() => {
+          publicNotice.delete().catch(() => {});
+        }, 8000);
+      }
+
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           successEmbed(
@@ -70,7 +79,6 @@ export default {
         ],
         flags: MessageFlags.Ephemeral,
       });
-
       setTimeout(() => {
         interaction.deleteReply().catch(err => 
           logger.debug('Failed to auto-delete purge response:', err)
