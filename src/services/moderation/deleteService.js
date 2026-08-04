@@ -7,7 +7,7 @@
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 
-const DELETE_NICKNAME = 'Deleted User';
+const DELETE_NICKNAME = 'DELETED';
 
 // In-memory timers so restores fire immediately when due, without waiting
 // for the next sweep. Rebuilt on startup via sweepExpiredDeletes.
