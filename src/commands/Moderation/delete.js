@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { applyDelete, parseDuration, isDeleted } from '../../services/moderation/deleteService.js';
@@ -90,8 +91,12 @@ export default {
         }
 
         // Just the GIF, no accompanying text — picks one of the two at random each time.
+        const embed = createEmbed({
+            image: pickRandomGif(),
+        });
+
         await InteractionHelper.safeEditReply(interaction, {
-            content: pickRandomGif(),
+            embeds: [embed],
         });
     },
 };
