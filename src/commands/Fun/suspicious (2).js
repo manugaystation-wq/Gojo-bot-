@@ -34,8 +34,8 @@ export default {
             title: 'Suspicious Activity Detected',
             description: `${targetUser} is **${percent}%** suspicious.`,
             color: 'warning',
+            image: SUSPICIOUS_GIF,
         });
-        embed.setImage(SUSPICIOUS_GIF);
 
         await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
     },
