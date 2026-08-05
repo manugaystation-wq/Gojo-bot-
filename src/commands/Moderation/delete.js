@@ -1,11 +1,22 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { applyDelete, parseDuration, isDeleted } from '../../services/moderation/deleteService.js';
 
 const MIN_DURATION_MS = 10 * 1000; // 10 seconds
 const MAX_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const ALLOWED_USER_ID = '1042151837341601882';
+
+// Direct media URLs pulled from the Tenor pages (not the tenor.com/view/ page
+// links, since Discord needs a direct .gif URL to actually render an embed).
+const RESULT_GIFS = [
+    'https://media1.tenor.com/m/o9Eh83m4PbAAAAAC/eliminate.gif',
+    'https://media1.tenor.com/m/ZzfT11K4ADcAAAAC/death-note.gif',
+];
+
+function pickRandomGif() {
+    return RESULT_GIFS[Math.floor(Math.random() * RESULT_GIFS.length)];
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,7 +34,6 @@ export default {
         .addStringOption((option) =>
             option.setName('reason').setDescription('Reason (optional)').setRequired(false),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
         .setDMPermission(false),
     category: 'moderation',
 
@@ -31,6 +41,13 @@ export default {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
             return;
+        }
+
+        if (interaction.user.id !== ALLOWED_USER_ID) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.PERMISSION,
+                message: 'This command is not available to you.',
+            });
         }
 
         const targetUser = interaction.options.getUser('user');
@@ -72,13 +89,9 @@ export default {
             });
         }
 
+        // Just the GIF, no accompanying text — picks one of the two at random each time.
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    'Member Deleted',
-                    `${member} has had their roles and nickname stripped for **${durationInput}**. Everything will be restored automatically.${reason ? `\n**Reason:** ${reason}` : ''}`,
-                ),
-            ],
+            content: pickRandomGif(),
         });
     },
 };
