@@ -1,18 +1,23 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { applyDelete, parseDuration, isDeleted } from '../../services/moderation/deleteService.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const MIN_DURATION_MS = 10 * 1000; // 10 seconds
 const MAX_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const ALLOWED_USER_ID = '1042151837341601882';
 
-// Direct media URLs pulled from the Tenor pages (not the tenor.com/view/ page
-// links, since Discord needs a direct .gif URL to actually render an embed).
+// Local files bundled with the project — put both in an `assets/` folder at
+// your project root (same level as index.js / src).
 const RESULT_GIFS = [
-    'https://media1.tenor.com/m/o9Eh83m4PbAAAAAC/eliminate.gif',
-    'https://media1.tenor.com/m/ZzfT11K4ADcAAAAC/death-note.gif',
+    { path: path.join(__dirname, '..', '..', '..', 'assets', 'delete1.gif'), name: 'delete1.gif' },
+    { path: path.join(__dirname, '..', '..', '..', 'assets', 'delete2.gif'), name: 'delete2.gif' },
 ];
 
 function pickRandomGif() {
@@ -91,12 +96,13 @@ export default {
         }
 
         // Just the GIF, no accompanying text — picks one of the two at random each time.
-        const embed = createEmbed({
-            image: pickRandomGif(),
-        });
+        const gif = pickRandomGif();
+        const attachment = new AttachmentBuilder(gif.path, { name: gif.name });
+        const embed = createEmbed({ image: `attachment://${gif.name}` });
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
+            files: [attachment],
         });
     },
 };
