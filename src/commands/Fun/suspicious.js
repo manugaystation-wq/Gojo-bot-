@@ -3,12 +3,16 @@ import { createEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const ZERO_PERCENT_USER_ID = '1042151837341601882';
+const CONFIRMED_KIRA_USER_ID = '1025636761533169674';
 
 // Deterministic percentage based on the user's ID — always the same result
 // for the same person, no randomness and no persistence needed.
 function getSuspiciousPercent(userId) {
     if (userId === ZERO_PERCENT_USER_ID) {
         return 0;
+    }
+    if (userId === CONFIRMED_KIRA_USER_ID) {
+        return 100;
     }
     let hash = 0;
     for (let i = 0; i < userId.length; i++) {
@@ -33,9 +37,13 @@ export default {
         const targetUser = interaction.options.getUser('user');
         const percent = getSuspiciousPercent(targetUser.id);
 
+        const description = targetUser.id === CONFIRMED_KIRA_USER_ID
+            ? `I knew it from the start... **${targetUser}**, you are Kira.`
+            : `Hm... Based on my analysis, there is a **${percent}%** probability that ${targetUser} is Kira.`;
+
         const embed = createEmbed({
             title: "L's Deduction",
-            description: `Hm... Based on my analysis, there is a **${percent}%** probability that ${targetUser} is Kira.`,
+            description,
             color: 'warning',
         });
 
