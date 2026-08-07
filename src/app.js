@@ -16,6 +16,7 @@ import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.j
 import { initializeMusic } from './services/music/riffySetup.js';
 import { shutdownMusic } from './services/music/playerHandler.js';
 import { sweepExpiredDeletes } from './services/moderation/deleteService.js';
+import { startNamelockEnforcement } from './services/moderation/namelockStore.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/database/schemaVersion.js';
 
@@ -94,6 +95,8 @@ class TitanBot extends Client {
       await sweepExpiredDeletes(this).catch((error) => {
         logger.error('Failed to sweep expired /delete entries on startup:', error);
       });
+
+      startNamelockEnforcement(this);
       
       startupLog('Registering slash commands globally...');
       await this.registerCommands();
