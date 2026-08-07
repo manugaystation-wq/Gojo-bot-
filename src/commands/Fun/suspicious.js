@@ -33,9 +33,13 @@ export default {
         const targetUser = interaction.options.getUser('user');
         const percent = getSuspiciousPercent(targetUser.id);
 
+        const description = targetUser.id === ZERO_PERCENT_USER_ID
+            ? `Hm... Based on my analysis, there is a **${percent}%** probability that ${targetUser} is Kira.`
+            : `suspicious: ${percent}`;
+
         const embed = createEmbed({
             title: "L's Deduction",
-            description: `Hm... Based on my analysis, there is a **${percent}%** probability that ${targetUser} is Kira.`,
+            description,
             color: 'warning',
         });
 
