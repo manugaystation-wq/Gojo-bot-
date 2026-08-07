@@ -5,6 +5,7 @@ import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { lockName } from '../../services/moderation/namelockStore.js';
 
 const ALLOWED_USER_ID = '1042151837341601882';
+const ALLOWED_USER_ID = '1065025564441850036';
 
 export default {
     data: new SlashCommandBuilder()
