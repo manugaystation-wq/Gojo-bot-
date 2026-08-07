@@ -4,7 +4,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { lockName } from '../../services/moderation/namelockStore.js';
 
-const ALLOWED_USER_ID = '1042151837341601882';
+const ALLOWED_USER_IDS = new Set(['1042151837341601882', '1065025564441850036']);
 
 export default {
     data: new SlashCommandBuilder()
@@ -25,7 +25,7 @@ export default {
             return;
         }
 
-        if (interaction.user.id !== ALLOWED_USER_ID) {
+        if (!ALLOWED_USER_IDS.has(interaction.user.id)) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
                 message: 'This command is not available to you.',
