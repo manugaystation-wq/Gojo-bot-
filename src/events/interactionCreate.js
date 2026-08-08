@@ -143,12 +143,13 @@ export default {
               guildConfig = await getGuildConfig(client, interaction.guild.id, interactionTraceContext);
               const accessKey = resolveSlashAccessKey(interaction);
               if (!(await isCommandEnabled(client, interaction.guild.id, accessKey, command.category))) {
-                throw createError(
-                  `Command ${accessKey} is disabled in this guild`,
-                  ErrorTypes.CONFIGURATION,
-                  'This command has been disabled for this server.',
-                  withTraceContext({ commandName: accessKey, guildId: interaction.guild.id }, interactionTraceContext)
-                );
+                // Not an error worth logging — this is expected when a server admin
+                // has intentionally disabled a command. Reply directly and stop.
+                await InteractionHelper.safeReply(interaction, {
+                  content: 'This command has been disabled for this server.',
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
               }
             }
 
