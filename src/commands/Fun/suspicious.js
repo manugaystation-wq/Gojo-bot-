@@ -38,7 +38,7 @@ export default {
         const percent = getSuspiciousPercent(targetUser.id);
 
         const description = targetUser.id === CONFIRMED_KIRA_USER_ID
-            ? `I knew it from the start... **${targetUser}**, you are Kira.`
+            ? `I knew it from the start... **${targetUser}**, you are Kira. **${percent}%** certain.`
             : `Hm... Based on my analysis, there is a **${percent}%** probability that ${targetUser} is Kira.`;
 
         const embed = createEmbed({
