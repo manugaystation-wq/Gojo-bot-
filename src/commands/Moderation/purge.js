@@ -5,6 +5,15 @@ import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+
+const MAX_PURGE_AMOUNT = 500;
+const BATCH_SIZE = 100; // Discord's hard cap per bulkDelete call
+const BATCH_DELAY_MS = 1000; // small pause between batches to avoid rate limits
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default {
     data: new SlashCommandBuilder()
     .setName("purge")
@@ -12,8 +21,10 @@ export default {
     .addIntegerOption((option) =>
       option
         .setName("amount")
-        .setDescription("Number of messages (1-100)")
-        .setRequired(true),
+        .setDescription(`Number of messages (1-${MAX_PURGE_AMOUNT})`)
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(MAX_PURGE_AMOUNT),
     )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
   category: "moderation",
@@ -32,12 +43,42 @@ export default {
     }
     const amount = interaction.options.getInteger("amount");
     const channel = interaction.channel;
-    if (amount < 1 || amount > 100)
-      return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please specify a number between 1 and 100.' });
+    if (amount < 1 || amount > MAX_PURGE_AMOUNT)
+      return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: `Please specify a number between 1 and ${MAX_PURGE_AMOUNT}.` });
     try {
-      const fetched = await channel.messages.fetch({ limit: amount });
-      const deleted = await channel.bulkDelete(fetched, true);
-      const deletedCount = deleted.size;
+      let totalDeleted = 0;
+      let remaining = amount;
+      let hitOldMessageWall = false;
+
+      while (remaining > 0) {
+        const batchLimit = Math.min(remaining, BATCH_SIZE);
+        const fetched = await channel.messages.fetch({ limit: batchLimit });
+
+        if (fetched.size === 0) {
+          break; // nothing left to delete
+        }
+
+        const deleted = await channel.bulkDelete(fetched, true); // true = filter out messages >14 days old
+        totalDeleted += deleted.size;
+        remaining -= batchLimit;
+
+        if (deleted.size < fetched.size) {
+          // Some fetched messages were too old to bulk delete — further
+          // batches will only get older, so stop here.
+          hitOldMessageWall = true;
+          break;
+        }
+
+        if (fetched.size < batchLimit) {
+          break; // ran out of messages in the channel
+        }
+
+        if (remaining > 0) {
+          await delay(BATCH_DELAY_MS);
+        }
+      }
+
+      const deletedCount = totalDeleted;
       await logEvent({
         client,
         guild: interaction.guild,
@@ -63,18 +104,21 @@ export default {
         logger.debug('Failed to send public purge notice:', error.message);
         return null;
       });
-
       if (publicNotice) {
         setTimeout(() => {
           publicNotice.delete().catch(() => {});
         }, 8000);
       }
 
+      const noteSuffix = hitOldMessageWall
+        ? ' Stopped early — remaining messages are older than 14 days and cannot be bulk deleted.'
+        : '';
+
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           successEmbed(
             "Messages Purged",
-            `Deleted ${deletedCount} messages in ${channel}.`,
+            `Deleted ${deletedCount} messages in ${channel}.${noteSuffix}`,
           ),
         ],
         flags: MessageFlags.Ephemeral,
